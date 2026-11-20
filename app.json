@@ -21,7 +21,8 @@
       "package": "com.toefltrainer.app"
     },
     "web": {
-      "output": "server",
+      "output": "single",
+      "lang": "ru",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [

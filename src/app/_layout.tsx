@@ -1,13 +1,12 @@
 import { Stack } from 'expo-router';
-import { SQLiteProvider } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
 import { useColors } from '../components/ui';
-import { DB_NAME, migrateDb } from '../lib/db';
+import { StorageProvider } from '../lib/storage';
 
 export default function RootLayout() {
   const c = useColors();
   return (
-    <SQLiteProvider databaseName={DB_NAME} onInit={migrateDb}>
+    <StorageProvider>
       <StatusBar style="auto" />
       <Stack
         screenOptions={{
@@ -22,6 +21,6 @@ export default function RootLayout() {
         <Stack.Screen name="section/[section]" options={{ title: '' }} />
         <Stack.Screen name="task/[id]" options={{ title: '' }} />
       </Stack>
-    </SQLiteProvider>
+    </StorageProvider>
   );
 }

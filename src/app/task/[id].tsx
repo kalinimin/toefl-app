@@ -1,22 +1,33 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
 import { Button, Card, Screen, T } from '../../components/ui';
-import { getTask } from '../../lib/db';
+import { useStorage } from '../../lib/storage';
 import { TASK_TYPES, type TaskFile } from '../../lib/types';
 
 // Здесь по типу задания будет подключаться нужный «плеер».
 // Пока модули не готовы, экран показывает содержимое задания для проверки загрузки.
 export default function TaskScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const db = useSQLiteContext();
+  return <TaskDetails key={id} id={id} />;
+}
+
+function TaskDetails({ id }: { id: string }) {
+  const db = useStorage();
   const [task, setTask] = useState<TaskFile | null | undefined>(undefined);
   const [showJson, setShowJson] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getTask(db, id).then(setTask);
+    let active = true;
+    db.getTask(id).then((item) => {
+      if (active) setTask(item);
+    }).catch((e: Error) => {
+      if (active) setError(e.message);
+    });
+    return () => { active = false; };
   }, [db, id]);
 
+  if (error) return <Screen><T v="danger">{error}</T></Screen>;
   if (task === undefined) return <Screen>{null}</Screen>;
   if (task === null) {
     return (
@@ -47,7 +58,7 @@ export default function TaskScreen() {
 
       <Card>
         <T>Модуль «{meta.title}» появится на неделе {meta.plannedWeek}.</T>
-        <T v="small">Задание загружено и сохранено на телефоне — синхронизация работает.</T>
+        <T v="small">Задание загружено и доступно в каталоге.</T>
       </Card>
 
       <Button

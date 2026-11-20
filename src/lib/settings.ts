@@ -1,10 +1,5 @@
-import * as SecureStore from 'expo-secure-store';
-import type { SQLiteDatabase } from 'expo-sqlite';
-import { getKv, setKv } from './db';
-
-// Ключ Azure хранится в защищённом хранилище телефона (Android Keystore),
-// остальные настройки — в обычной базе.
-const AZURE_KEY = 'azure_speech_key';
+import { getAzureKey } from './speech-key';
+import type { Storage } from './storage';
 
 export interface Settings {
   contentUrl: string;
@@ -12,11 +7,11 @@ export interface Settings {
   hasAzureKey: boolean;
 }
 
-export async function loadSettings(db: SQLiteDatabase): Promise<Settings> {
+export async function loadSettings(db: Storage): Promise<Settings> {
   const [contentUrl, azureRegion, key] = await Promise.all([
-    getKv(db, 'content_url'),
-    getKv(db, 'azure_region'),
-    SecureStore.getItemAsync(AZURE_KEY),
+    db.getKv('content_url'),
+    db.getKv('azure_region'),
+    getAzureKey(),
   ]);
   return {
     contentUrl: contentUrl ?? '',
@@ -25,22 +20,12 @@ export async function loadSettings(db: SQLiteDatabase): Promise<Settings> {
   };
 }
 
-export async function saveContentUrl(db: SQLiteDatabase, url: string): Promise<void> {
-  await setKv(db, 'content_url', normalizeContentUrl(url));
+export async function saveContentUrl(db: Storage, url: string): Promise<void> {
+  await db.setKv('content_url', normalizeContentUrl(url));
 }
 
-export async function saveAzureRegion(db: SQLiteDatabase, region: string): Promise<void> {
-  await setKv(db, 'azure_region', region.trim().toLowerCase());
-}
-
-export async function saveAzureKey(key: string): Promise<void> {
-  const k = key.trim();
-  if (k) await SecureStore.setItemAsync(AZURE_KEY, k);
-  else await SecureStore.deleteItemAsync(AZURE_KEY);
-}
-
-export async function getAzureKey(): Promise<string | null> {
-  return SecureStore.getItemAsync(AZURE_KEY);
+export async function saveAzureRegion(db: Storage, region: string): Promise<void> {
+  await db.setKv('azure_region', region.trim().toLowerCase());
 }
 
 // Принимает и обычную ссылку на репозиторий GitHub, и raw-ссылку:

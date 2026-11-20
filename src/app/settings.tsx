@@ -1,40 +1,47 @@
 import { router } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 import { Button, Card, Screen, T, useColors } from '../components/ui';
 import {
   loadSettings,
   normalizeContentUrl,
-  saveAzureKey,
   saveAzureRegion,
   saveContentUrl,
 } from '../lib/settings';
+import { saveAzureKey, speechKeyScope } from '../lib/speech-key';
+import { useStorage } from '../lib/storage';
 
 export default function SettingsScreen() {
-  const db = useSQLiteContext();
+  const db = useStorage();
   const c = useColors();
   const [contentUrl, setContentUrl] = useState('');
   const [region, setRegion] = useState('');
   const [key, setKey] = useState('');
   const [hasKey, setHasKey] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadSettings(db).then((s) => {
       setContentUrl(s.contentUrl);
       setRegion(s.azureRegion);
       setHasKey(s.hasAzureKey);
-    });
+      setLoaded(true);
+    }).catch((e: Error) => setError(e.message));
   }, [db]);
 
   async function onSave() {
     setBusy(true);
+    setError(null);
     try {
       await saveContentUrl(db, contentUrl);
       await saveAzureRegion(db, region);
       if (key.trim()) await saveAzureKey(key);
-      router.back();
+      if (router.canGoBack()) router.back();
+      else router.replace('/');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
     }
@@ -55,6 +62,7 @@ export default function SettingsScreen() {
         <T v="heading">Репозиторий заданий</T>
         <T v="small">Ссылка на публичный репозиторий GitHub или raw-адрес папки с index.json.</T>
         <TextInput
+          accessibilityLabel="Адрес репозитория заданий"
           style={input}
           value={contentUrl}
           onChangeText={setContentUrl}
@@ -71,6 +79,7 @@ export default function SettingsScreen() {
         <T v="heading">Azure Speech</T>
         <T v="small">Регион ресурса, например westeurope или eastus.</T>
         <TextInput
+          accessibilityLabel="Регион Azure Speech"
           style={input}
           value={region}
           onChangeText={setRegion}
@@ -80,9 +89,11 @@ export default function SettingsScreen() {
           autoCorrect={false}
         />
         <T v="small">
-          {hasKey ? 'Ключ сохранён на телефоне. Введите новый, чтобы заменить.' : 'Ключ ещё не сохранён.'}
+          {hasKey ? 'Введите новый ключ, чтобы заменить текущий.' : 'Ключ ещё не сохранён.'}
+          {' Ключ хранится '}{speechKeyScope}.
         </T>
         <TextInput
+          accessibilityLabel="Ключ Azure Speech"
           style={input}
           value={key}
           onChangeText={setKey}
@@ -99,7 +110,8 @@ export default function SettingsScreen() {
         )}
       </Card>
 
-      <Button title="Сохранить" onPress={onSave} busy={busy} />
+      {error && <T v="danger">{error}</T>}
+      <Button title="Сохранить" onPress={onSave} busy={busy} disabled={!loaded} />
     </Screen>
   );
 }

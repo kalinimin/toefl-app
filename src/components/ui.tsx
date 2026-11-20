@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
+import { Link, type Href } from 'expo-router';
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -56,20 +58,23 @@ export function Screen({ children, scroll = true }: { children: ReactNode; scrol
 export function Card({
   children,
   onPress,
+  href,
   style,
 }: {
   children: ReactNode;
   onPress?: () => void;
+  href?: Href;
   style?: StyleProp<ViewStyle>;
 }) {
   const c = useColors();
   const base = [styles.card, { backgroundColor: c.card, borderColor: c.border }, style];
-  if (!onPress) return <View style={base}>{children}</View>;
-  return (
-    <Pressable onPress={onPress} style={({ pressed }) => [base, pressed && { opacity: 0.7 }]}>
+  if (!onPress && !href) return <View style={base}>{children}</View>;
+  const pressable = (
+    <Pressable accessibilityRole={href ? 'link' : 'button'} onPress={onPress} style={({ pressed }) => [base, pressed && { opacity: 0.7 }]}>
       {children}
     </Pressable>
   );
+  return href ? <Link href={href} asChild>{pressable}</Link> : pressable;
 }
 
 type Variant = 'title' | 'heading' | 'body' | 'muted' | 'small' | 'danger' | 'ok';
@@ -119,6 +124,7 @@ export function Button({
   const off = disabled || busy;
   return (
     <Pressable
+      accessibilityRole="button"
       onPress={onPress}
       disabled={off}
       style={({ pressed }) => [
@@ -149,7 +155,12 @@ export function Badge({ label }: { label: string }) {
 
 const styles = StyleSheet.create({
   scroll: { flexGrow: 1 },
-  inner: { padding: 16, gap: 12, flexGrow: 1 },
+  inner: {
+    padding: 16,
+    gap: 12,
+    flexGrow: 1,
+    ...(Platform.OS === 'web' && { width: '100%', maxWidth: 960, alignSelf: 'center' }),
+  },
   card: { borderWidth: 1, borderRadius: 14, padding: 16, gap: 6 },
   button: {
     minHeight: 48,

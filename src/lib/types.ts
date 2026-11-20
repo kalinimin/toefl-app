@@ -70,5 +70,5 @@ export const TASK_TYPES: Record<
 };
 
 export function isTaskType(value: unknown): value is TaskType {
-  return typeof value === 'string' && value in TASK_TYPES;
+  return typeof value === 'string' && Object.prototype.hasOwnProperty.call(TASK_TYPES, value);
 }
